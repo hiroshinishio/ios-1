@@ -29,48 +29,64 @@ struct NCMediaScrollView: View, Equatable {
     var body: some View {
         let _ = Self._printChanges()
 
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 2) {
-                ForEach(metadatas, id: \.self) { rowMetadatas in
-                    NCMediaRow(metadatas: rowMetadatas) { tappedThumbnail, isSelected in
-                        onCellSelected(tappedThumbnail, isSelected)
-                    } onCellContextMenuItemSelected: { thumbnail, selection in
-                        onCellContextMenuItemSelected(thumbnail, selection)
-                    }
-                    // NOTE: This only works properly on device. On simulator, for some reason, these get called way too early or way too late.
-                    .onAppear {
-                        if hasRotated { return }
-                        guard let date = rowMetadatas.first?.date as? Date else { return }
-                        bottomMostVisibleMetadataDate = date
-                        title = NCUtility().getTitleFromDate(max(topMostVisibleMetadataDate, bottomMostVisibleMetadataDate))
-                    }
-                    .onDisappear {
-                        if hasRotated { return }
-                        guard let date = rowMetadatas.last?.date as? Date else { return }
-                        topMostVisibleMetadataDate = date
-                        title = NCUtility().getTitleFromDate(max(topMostVisibleMetadataDate, bottomMostVisibleMetadataDate))
-                    }
-                }
+        List {
+            Spacer(minLength: 50).listRowSeparator(.hidden)
 
-                if !metadatas.isEmpty, shouldShowPaginationLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 20)
+            //            LazyVStack(alignment: .leading, spacing: 2) {
+            ForEach(metadatas, id: \.self) { rowMetadatas in
+                NCMediaRow(metadatas: rowMetadatas) { tappedThumbnail, isSelected in
+                    onCellSelected(tappedThumbnail, isSelected)
+                } onCellContextMenuItemSelected: { thumbnail, selection in
+                    onCellContextMenuItemSelected(thumbnail, selection)
                 }
+                // NOTE: This only works properly on device. On simulator, for some reason, these get called way too early or way too late.
+                .onAppear {
+                    if hasRotated { return }
+                    guard let date = rowMetadatas.first?.date as? Date else { return }
+                    bottomMostVisibleMetadataDate = date
+                    title = NCUtility().getTitleFromDate(max(topMostVisibleMetadataDate, bottomMostVisibleMetadataDate))
+                }
+                .onDisappear {
+                    if hasRotated { return }
+                    guard let date = rowMetadatas.last?.date as? Date else { return }
+                    topMostVisibleMetadataDate = date
+                    title = NCUtility().getTitleFromDate(max(topMostVisibleMetadataDate, bottomMostVisibleMetadataDate))
+                }
+                .listRowSeparator(.hidden)
+                .listRowSpacing(0)
+                .listRowInsets(.init(top: 2, leading: 0, bottom: 0, trailing: 0))
             }
-            .onRotate { orientation in
-                if self.orientation == orientation.isLandscapeHardCheck { return }
 
-                self.orientation = orientation.isLandscapeHardCheck
-                hasRotated = true
-                title = NSLocalizedString("_media_", comment: "")
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    hasRotated = false
-                }
+            if !metadatas.isEmpty, shouldShowPaginationLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
             }
-            .padding(.top, 70)
-            .padding(.bottom, 40)
+
+            Spacer(minLength: 40).listRowSeparator(.hidden)
+
         }
+        .listStyle(.plain)
+        .onRotate { orientation in
+            if self.orientation == orientation.isLandscapeHardCheck { return }
+
+            self.orientation = orientation.isLandscapeHardCheck
+            hasRotated = true
+            title = NSLocalizedString("_media_", comment: "")
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                hasRotated = false
+            }
+        }
+        .introspect(.list, on: .iOS(.v16, .v17)) { collectionView in
+//                collectionView.backgroundView = UIView()
+//                collectionView.subviews.dropFirst(1).first?.backgroundColor = .cyan
+            let delegate = ScrollDelegate()
+            collectionView.delegate = delegate
+        }
+//        .padding(.top, 70)
+//        .padding(.bottom, 40)
     }
+
 }
+//}

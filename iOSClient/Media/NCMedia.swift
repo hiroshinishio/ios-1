@@ -65,7 +65,7 @@ struct NCMedia: View {
             }
             .equatable()
             .ignoresSafeArea(.all, edges: .horizontal)
-            .scrollStatusByIntrospect(isScrolledToTop: $isScrolledToTop, isScrolledToBottom: $isScrolledToBottom, isScrollingStopped: $isScrollingStopped)
+//            .scrollStatusByIntrospect(isScrolledToTop: $isScrolledToTop, isScrolledToBottom: $isScrolledToBottom, isScrollingStopped: $isScrollingStopped)
 
             Toolbar(showPlayFromURLAlert: $showPlayFromURLAlert, columnCountStagesIndex: $columnCountStagesIndex, columnCountStages: $columnCountStages, title: $title, showDeleteConfirmation: $showDeleteConfirmation, isScrolledToTop: $isScrolledToTop, isScrollingStopped: $isScrollingStopped)
         }
@@ -134,6 +134,7 @@ struct NCMedia: View {
 
     private func findClosestZoomIndex(value: Double) -> Int {
         let distanceArray = columnCountStages.map { abs(Double($0) - value) } // absolute difference between zoom stages and actual pinch zoom
+        return distanceArray.indices.min(by: {distanceArray[$0] < distanceArray[$1]}) ?? 0 // return index of element that is "closest"
         return distanceArray.indices.min(by: {distanceArray[$0] < distanceArray[$1]}) ?? 0 // return index of element that is "closest"
     }
 
@@ -410,7 +411,7 @@ struct NCMediaNew_Previews: PreviewProvider {
     }
 }
 
-final class ScrollDelegate: NSObject, UITableViewDelegate, UIScrollViewDelegate {
+final class ScrollDelegate: NSObject, UICollectionViewDelegate {
     var isScrolledToTop: Binding<Bool>?
     var isScrolledToBottom: Binding<Bool>?
     var isScrollingStopped: Binding<Bool>?
@@ -449,8 +450,18 @@ struct ScrollStatusByIntrospectModifier: ViewModifier {
                 self.delegate.isScrolledToBottom = $isScrolledToBottom
                 self.delegate.isScrollingStopped = $isScrollingStopped
             }
-            .introspect(.scrollView, on: .iOS(.v15...)) { scrollView in
-                scrollView.delegate = delegate
+//            .introspect(.list, on: .iOS(.v15...)) { scrollView in
+//                scrollView.delegate = delegate
+//            }
+//            .introspect(.list, on: .iOS(.v13, .v14, .v15)) { tableView in
+////                tableView.backgroundView = UIView()
+////                tableView.backgroundColor = .cyan
+//                tableView.delegate = delegate
+//            }
+            .introspect(.list, on: .iOS(.v16, .v17)) { collectionView in
+//                collectionView.backgroundView = UIView()
+//                collectionView.subviews.dropFirst(1).first?.backgroundColor = .cyan
+                collectionView.delegate = delegate
             }
     }
 }
