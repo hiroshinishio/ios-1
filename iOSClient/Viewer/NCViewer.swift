@@ -35,7 +35,6 @@ class NCViewer: NSObject {
     private var metadatas: [tableMetadata] = []
 
     func view(viewController: UIViewController, metadata: tableMetadata, metadatas: [tableMetadata], imageIcon: UIImage?, editor: String = "", isRichDocument: Bool = false) {
-
         self.metadata = metadata
         self.metadatas = metadatas
 

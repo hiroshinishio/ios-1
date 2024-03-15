@@ -29,6 +29,7 @@ import SwiftUI
 import MobileVLCKit
 import JGProgressHUD
 import Alamofire
+import Vision
 
 public protocol NCViewerMediaViewDelegate: AnyObject {
     func didOpenDetail()
@@ -62,6 +63,13 @@ class NCViewerMedia: UIViewController {
     weak var delegate: NCViewerMediaViewDelegate?
 
     private var allowOpeningDetails = true
+
+    // Layer into which to draw bounding box paths.
+    var pathLayer: CALayer?
+
+    // Image parameters for reuse throughout app
+    var imageWidth: CGFloat = 0
+    var imageHeight: CGFloat = 0
 
     // MARK: - View Life Cycle
 
@@ -296,16 +304,82 @@ class NCViewerMedia: UIViewController {
             downloadImage()
         }
 
-        // Get image
-        let image = getImageMetadata(metadata)
+        guard let originalImage = getImageMetadata(metadata),
+              let cgImage = originalImage.cgImage else { return }
+
         if self.metadata.ocId == metadata.ocId {
-            self.image = image
-            self.imageVideoContainer.image = image
+//            show(originalImage)
+
+            self.image = originalImage
+            self.imageVideoContainer.image = originalImage
+        }
+
+        let cgOrientation = CGImagePropertyOrientation(originalImage.imageOrientation)
+
+        let requestHandler = VNImageRequestHandler(cgImage: cgImage, orientation: cgOrientation)
+
+        let request = VNRecognizeTextRequest(completionHandler: recognizeTextHandler)
+
+        // Send the requests to the request handler.
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1) {
+            do {
+                try requestHandler.perform([request])
+            } catch let error as NSError {
+                print("Failed to perform image request: \(error)")
+                return
+            }
+        }
+    }
+
+    private func show(_ image: UIImage) {
+        // Remove previous paths & image
+        pathLayer?.removeFromSuperlayer()
+        pathLayer = nil
+//        self.image = nil
+        self.imageVideoContainer.image = nil
+
+        // Account for image orientation by transforming view.
+        let correctedImage = scaleAndOrient(image: image)
+
+        // Place photo inside imageView.
+        self.image = correctedImage
+        self.imageVideoContainer.image = correctedImage
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in
+            // Transform image to fit screen.
+            guard let cgImage = correctedImage.cgImage else {
+                print("Trying to show an image not backed by CGImage!")
+                return
+            }
+
+            let fullImageWidth = CGFloat(cgImage.width)
+            let fullImageHeight = CGFloat(cgImage.height)
+
+            let imageFrame = imageVideoContainer.frame
+            let widthRatio = fullImageWidth / imageFrame.width
+            let heightRatio = fullImageHeight / imageFrame.height
+
+            // ScaleAspectFit: The image will be scaled down according to the stricter dimension.
+            let scaleDownRatio = max(widthRatio, heightRatio)
+
+            // Cache image dimensions to reference when drawing CALayer paths.
+            imageWidth = fullImageWidth / scaleDownRatio
+            imageHeight = fullImageHeight / scaleDownRatio
+
+            // Prepare pathLayer to hold Vision results.
+            let xLayer = (imageFrame.width - imageWidth) / 2
+            let yLayer = imageVideoContainer.frame.minY + (imageFrame.height - imageHeight) / 2
+            let drawingLayer = CALayer()
+            drawingLayer.bounds = CGRect(x: xLayer, y: yLayer, width: imageWidth, height: imageHeight)
+            drawingLayer.anchorPoint = CGPoint.zero
+            drawingLayer.position = CGPoint(x: xLayer, y: yLayer)
+            drawingLayer.opacity = 0.5
+            pathLayer = drawingLayer
+            self.view.layer.addSublayer(pathLayer!)
         }
     }
 
     func getImageMetadata(_ metadata: tableMetadata) -> UIImage? {
-
         if let image = utility.getImage(metadata: metadata) {
             return image
         }
