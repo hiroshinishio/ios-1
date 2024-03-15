@@ -321,7 +321,7 @@ class NCViewerMedia: UIViewController {
         let request = VNRecognizeTextRequest(completionHandler: recognizeTextHandler)
 
         // Send the requests to the request handler.
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 1) {
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.2) {
             do {
                 try requestHandler.perform([request])
             } catch let error as NSError {
