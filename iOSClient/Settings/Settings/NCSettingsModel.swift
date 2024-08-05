@@ -31,6 +31,7 @@ import LocalAuthentication
 class NCSettingsModel: ObservableObject, ViewOnAppearHandling {
     /// AppDelegate
     let appDelegate = (UIApplication.shared.delegate as? AppDelegate)!
+
     /// Keychain access
     var keychain = NCKeychain()
     /// State to control the lock on/off section
@@ -45,6 +46,7 @@ class NCSettingsModel: ObservableObject, ViewOnAppearHandling {
     @Published var resetWrongAttempts: Bool = false
     /// Request account on start
     @Published var accountRequest: Bool = false
+    @Published var showConfiguration: Bool = false
     /// Root View Controller
     @Published var controller: NCMainTabBarController?
     /// Footer
@@ -99,7 +101,9 @@ class NCSettingsModel: ObservableObject, ViewOnAppearHandling {
         let configLink = appDelegate.urlBase + NCBrandOptions.shared.mobileconfig
         let configServer = NCConfigServer()
         if let url = URL(string: configLink) {
-            configServer.startService(url: url)
+            configServer.startService(url: url, completion: { url in
+                self.showConfiguration = true
+            })
         }
     }
 

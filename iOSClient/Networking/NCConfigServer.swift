@@ -25,13 +25,14 @@ import Foundation
 import UIKit
 import Swifter
 import NextcloudKit
+import WebKit
 
 // Source:
 // https://stackoverflow.com/questions/2338035/installing-a-configuration-profile-on-iphone-programmatically
 
-@objc class NCConfigServer: NSObject, UIActionSheetDelegate, URLSessionDelegate {
+@objc class NCConfigServer: NSObject, UIActionSheetDelegate, URLSessionDelegate, WKNavigationDelegate {
     // Start service
-    @objc func startService(url: URL) {
+    @objc func startService(url: URL, completion: @escaping (URL) -> Void) {
         let defaultSessionConfiguration = URLSessionConfiguration.default
         let defaultSession = URLSession(configuration: defaultSessionConfiguration, delegate: self, delegateQueue: .main)
         var urlRequest = URLRequest(url: url)
@@ -41,7 +42,7 @@ import NextcloudKit
             if let error = error {
                 NCContentPresenter().showInfo(error: NKError(error: error))
             } else if let data = data {
-                self.start(data: data)
+                self.start(data: data, completion: completion)
             }
         }
         dataTask.resume()
@@ -73,7 +74,7 @@ import NextcloudKit
 
     // MARK: - Control functions
 
-    internal func start(data: Data) {
+    internal func start(data: Data, completion: @escaping (URL) -> Void) {
         self.configData = data
         self.localServer = HttpServer()
         self.setupHandlers()
@@ -85,7 +86,8 @@ import NextcloudKit
                 try localServer?.start(listeningPort, forceIPv4: false, priority: .default)
                 serverState = .Ready
                 registerForNotifications()
-                UIApplication.shared.open(url)
+                completion(url)
+//                UIApplication.shared.open(url)
             } catch {
                 NCContentPresenter().showInfo(error: NKError(error: error))
                 self.stop()
